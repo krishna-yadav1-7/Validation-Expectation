@@ -1,3 +1,6 @@
+https://chatgpt.com/share/67ee4520-42e8-8007-84b2-468eb74cf9f1
+
+
 ####Schema validation
 
 from pyspark.sql.types import StructType, StructField, IntegerType, StringType
@@ -13,4 +16,52 @@ df = spark.read.csv("dbfs:/mnt/data/users.csv", header=True, schema=expected_sch
 if df.schema != expected_schema:
     raise ValueError("Schema mismatch! Expected schema does not match actual schema.")
 
+###Null Value Check (Ensure No Critical Data is Missing)
+
+from pyspark.sql.functions import col
+
+null_counts = df.select([col(c).isNull().cast("int").alias(c) for c in df.columns]).summary("count")
+null_counts.show()
+-------------------------------------------------------------------------------------------
+
+###  Duplicate Record Check (Avoid Data Duplication)
+
+from pyspark.sql.functions import count
+
+duplicate_count = df.groupBy("id").count().filter("count > 1").count()
+
+if duplicate_count > 0:
+    print(f"Warning: {duplicate_count} duplicate records found!")
+
+---------------------------------------------------------------------------------------------
+
+###Data Type Validation (Ensure Data is in the Correct Format)
+
+from pyspark.sql.functions import col
+
+df.select(col("age").cast("int")).show()  # If conversion fails, the data is incorrect
+---------------------------------------------------------------------------------------------
+
+####Business Rule Validation (Ensure Logical Consistency)
+Expectation: Data should meet business logic constraints.
+
+invalid_data = df.filter((col("age") < 0) | (col("salary") < 0))
+
+if invalid_data.count() > 0:
+    print("Invalid data found!")
+    invalid_data.show()
+------------------------------------------------------------------------------------------
+
+### Referential Integrity Check (Ensure Relationships Between Tables Are Maintained)
+
+ Every foreign key must exist in the primary key table.
+
+customer_df = spark.read.parquet("dbfs:/mnt/data/customers")
+orders_df = spark.read.parquet("dbfs:/mnt/data/orders")
+
+orphan_orders = orders_df.join(customer_df, "customer_id", "left_anti")
+
+if orphan_orders.count() > 0:
+    print("Orphan orders found!")
+    orphan_orders.show()
 
