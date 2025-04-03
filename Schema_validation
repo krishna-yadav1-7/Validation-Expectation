@@ -1,0 +1,16 @@
+####Schema validation
+
+from pyspark.sql.types import StructType, StructField, IntegerType, StringType
+
+expected_schema = StructType([
+    StructField("id", IntegerType(), False),
+    StructField("name", StringType(), False),
+    StructField("age", IntegerType(), True)
+])
+
+df = spark.read.csv("dbfs:/mnt/data/users.csv", header=True, schema=expected_schema)
+
+if df.schema != expected_schema:
+    raise ValueError("Schema mismatch! Expected schema does not match actual schema.")
+
+
